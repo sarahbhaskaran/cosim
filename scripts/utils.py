@@ -38,6 +38,7 @@ def fs_accel(dx, vego, vlead):
         (v + (U - v) * (dx - dx2) / (dx3 - dx2)) * (dx2 < dx <= dx3) + \
         U * (dx3 < dx)
     accel = np.clip((cmd_vel - vego) / 0.5, -1.5, 1.0)
+    print('accel', accel)
     return accel
 
 
@@ -75,7 +76,7 @@ def get_next_vel(kernel, mode):
 def set_speed_debug(kernel, mode):
     next_vel = get_next_vel(kernel, mode)
     kernel.vehicle.setSpeed('ego', next_vel)
-    kernel.vehicle.setSpeed('lead', 0)
+    kernel.vehicle.setSpeed('lead', 1)
 
 
 def get_data_debug(kernel, mode):
