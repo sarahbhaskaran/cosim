@@ -1,3 +1,5 @@
+import matplotlib
+matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 import numpy as np
 import os
@@ -11,6 +13,7 @@ plt.plot(sumo[:, 0], sumo[:, 4], label='lead')
 plt.xlabel('time')
 plt.ylabel('pos')
 plt.legend()
+plt.savefig('./pos_vs_time.png')
 
 plt.figure()
 sumo = np.load(dir + '/data/sumo_log.npy')
@@ -19,13 +22,15 @@ plt.plot(sumo[:, 0], sumo[:, 5], label='lead')
 plt.xlabel('time')
 plt.ylabel('velocity (SUMO)')
 plt.legend()
+plt.savefig('./vel_vs_time.png')
 
 plt.figure()
-subs = np.load(dir+'/data/pub_msgs.npy')
+subs = np.load(dir+'/data/sub_msgs.npy')
 plt.plot(subs[:, 0], subs[:, 1], label='vel')
-pubs = np.load(dir+'/data/pub_msgs.npy')
+pubs = np.load(dir+'/data/sub_msgs.npy')
 plt.plot(pubs[:, 0], pubs[:, 1], label='cmd_vel')
 plt.xlabel('time')
 plt.ylabel('ROS msg')
 plt.legend()
+plt.savefig('./cmd_vel.png')
 plt.show()
