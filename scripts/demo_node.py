@@ -31,7 +31,7 @@ class SumoHostNode:
         self.space_gap_pub = rospy.Publisher('/lead_dist', Float64, queue_size=0)
         self.rel_vel_pub = rospy.Publisher('/rel_vel', Twist, queue_size=0)
         self.acc_pub = rospy.Publisher('/msg_467', Point, queue_size=0)
-        self.cmd_vel_sub = rospy.Subscriber('/cmd_vel', Twist, callback=self.callback2)
+        self.cmd_vel_sub = rospy.Subscriber('/v_act', Twist, callback=self.callback2)
         self.v_ref_sub = rospy.Subscriber('/v_ref', Twist, callback=self.callback3)
         self.pub_data = []
         self.sub_data = []
@@ -54,7 +54,8 @@ class SumoHostNode:
         self.t = time.time() - self.t0
         # self.pub.publish(self.cmd_vel)
         self.pub_data.append([self.t, self.vel.linear.x])
-        for t in range(4320):
+        # for t in range(4320):
+        for t in range(1000):     
             self.rate.sleep()
             self.sumo_data.append(self.get_data_debug())
 
@@ -153,11 +154,11 @@ class SumoHostNode:
 
     def get_data_debug(self):
         t = self.kernel.simulation.getTime() - self.kernel.simulation.getDeltaT()
-        ego_pos = self.kernel.vehicle.getLanePosition('ego')
+        ego_pos = self.kernel.vehicle.getDistance('ego')
         ego_vel = self.kernel.vehicle.getSpeed('ego')
         # TODO make ego_acc correct
         ego_acc = 0
-        lead_pos = self.kernel.vehicle.getLanePosition('lead')
+        lead_pos = self.kernel.vehicle.getDistance('lead')
         lead_vel = self.kernel.vehicle.getSpeed('lead')
         lead_acc = 0
         return [t, ego_pos, ego_vel, ego_acc, lead_pos, lead_vel, lead_acc]
