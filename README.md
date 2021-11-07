@@ -32,4 +32,11 @@ roslaunch transfer_pkg rl0719_readonly.launch readonly:=false
 This is all for main branch for now; when using acceleration model, start running that rosnode as well.
 
 ## Run simulation
-1. rosrun cosim demo_node.py
+1. `rosrun cosim demo_node.py`
+
+## View results
+1. 
+```
+cd scripts
+python graph.py
+```
