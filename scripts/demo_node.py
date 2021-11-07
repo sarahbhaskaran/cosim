@@ -54,11 +54,15 @@ class SumoHostNode:
         self.t = time.time() - self.t0
         # self.pub.publish(self.cmd_vel)
         self.pub_data.append([self.t, self.vel.linear.x])
-        for t in range(4320):
+        #for t in range(4320):
+        for t in range(2000):
             self.rate.sleep()
             self.sumo_data.append(self.get_data_debug())
 
             curr_lead_vel = self.get_lead_vel(t)
+            if t > 1200:
+                curr_lead_vel = 15
+
 
             self.kernel.vehicle.setSpeed('lead', curr_lead_vel)
             self.kernel.vehicle.setSpeed('ego', self.cmd_vel.linear.x)
@@ -153,11 +157,11 @@ class SumoHostNode:
 
     def get_data_debug(self):
         t = self.kernel.simulation.getTime() - self.kernel.simulation.getDeltaT()
-        ego_pos = self.kernel.vehicle.getLanePosition('ego')
+        ego_pos = self.kernel.vehicle.getDistance('ego')
         ego_vel = self.kernel.vehicle.getSpeed('ego')
         # TODO make ego_acc correct
         ego_acc = 0
-        lead_pos = self.kernel.vehicle.getLanePosition('lead')
+        lead_pos = self.kernel.vehicle.getDistance('lead')
         lead_vel = self.kernel.vehicle.getSpeed('lead')
         lead_acc = 0
         return [t, ego_pos, ego_vel, ego_acc, lead_pos, lead_vel, lead_acc]
