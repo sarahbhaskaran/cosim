@@ -159,7 +159,8 @@ class SumoHostNode:
         ego_vel = self.kernel.vehicle.getSpeed('ego')
         # TODO make ego_acc correct
         ego_acc = 0
-        lead_pos = self.kernel.vehicle.getDistance('lead')
+        # Add 50 because the lead vehicle started 50 ahead of the ego vehicle
+        lead_pos = self.kernel.vehicle.getDistance('lead') + 50
         lead_vel = self.kernel.vehicle.getSpeed('lead')
         lead_acc = 0
         return [t, ego_pos, ego_vel, ego_acc, lead_pos, lead_vel, lead_acc]
