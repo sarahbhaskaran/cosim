@@ -60,8 +60,6 @@ class SumoHostNode:
             self.sumo_data.append(self.get_data_debug())
 
             curr_lead_vel = self.get_lead_vel(t)
-            if t > 1200:
-                curr_lead_vel = 15
 
 
             self.kernel.vehicle.setSpeed('lead', curr_lead_vel)
