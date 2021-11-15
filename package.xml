@@ -1,13 +1,13 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>cosim_demo</name>
+  <name>cosim</name>
   <version>0.0.0</version>
-  <description>The cosim_demo package</description>
+  <description>Modifications on the cosim_demo package</description>
 
   <!-- One maintainer tag required, multiple allowed, one person per tag -->
   <!-- Example:  -->
   <!-- <maintainer email="jane.doe@example.com">Jane Doe</maintainer> -->
-  <maintainer email="fangyu@todo.todo">fangyu</maintainer>
+  <maintainer email="sarah@todo.todo">sarah</maintainer>
 
 
   <!-- One license tag required, multiple allowed, one license per tag -->

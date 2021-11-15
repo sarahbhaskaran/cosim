@@ -55,14 +55,18 @@ class SumoHostNode:
         # self.pub.publish(self.cmd_vel)
         self.pub_data.append([self.t, self.vel.linear.x])
         # for t in range(4320):
-        for t in range(1000):     
+        for t in range(800):     
             self.rate.sleep()
             self.sumo_data.append(self.get_data_debug())
 
             curr_lead_vel = self.get_lead_vel(t)
+            # curr_lead_vel = 15
 
             self.kernel.vehicle.setSpeed('lead', curr_lead_vel)
-            self.kernel.vehicle.setSpeed('ego', self.cmd_vel.linear.x)
+            if self.t > 2000:
+                self.kernel.vehicle.setSpeed('ego', 10)
+            else:
+                self.kernel.vehicle.setSpeed('ego', self.cmd_vel.linear.x)
 
             self.kernel.simulationStep()
 
@@ -136,7 +140,11 @@ class SumoHostNode:
     def get_sim_state(self):
         lead_edge = self.kernel.vehicle.getRoadID('lead')
         lead_edgepos = self.kernel.vehicle.getLanePosition('lead')
-        dx = self.kernel.vehicle.getDrivingDistance('ego', lead_edge, lead_edgepos)
+        try:
+            dx = self.kernel.vehicle.getDrivingDistance('ego', lead_edge, lead_edgepos)
+        except traci.exceptions.TraCIException:
+            print('TRACI EXCEPTION BUT JUST GUESS AT DISTANCE')
+            dx = 500
         dx = dx - self.kernel.vehicle.getLength('lead')
         dx = dx - self.kernel.vehicle.getMinGap('ego')
         vego = self.kernel.vehicle.getSpeed('ego')
@@ -158,17 +166,24 @@ class SumoHostNode:
         ego_vel = self.kernel.vehicle.getSpeed('ego')
         # TODO make ego_acc correct
         ego_acc = 0
-        lead_pos = self.kernel.vehicle.getDistance('lead')
+        # Lead starts 50m ahead
+        lead_pos = 50 + self.kernel.vehicle.getDistance('lead')
         lead_vel = self.kernel.vehicle.getSpeed('lead')
         lead_acc = 0
         return [t, ego_pos, ego_vel, ego_acc, lead_pos, lead_vel, lead_acc]
 
 
 if __name__ == '__main__':
+    node = None
     try:
         rospy.init_node('sumo_host_node', anonymous=False)
         node = SumoHostNode()
         node.shutdown()
+    
+    except traci.exceptions.TraCIException:
+        print('\nERROR IN TraCI\n')
+        if node:
+            node.shutdown()
     except rospy.ROSInterruptException:
         pass
 

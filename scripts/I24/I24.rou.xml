@@ -1,0 +1,4 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<routes xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://sumo.dlr.de/xsd/routes_file.xsd">
+  <route id="Eastbound_3" edges="Eastbound_3 Eastbound_4 Eastbound_5 Eastbound_6 Eastbound_7 Eastbound_8"/>
+</routes>
