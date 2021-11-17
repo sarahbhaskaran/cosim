@@ -18,8 +18,10 @@ class SumoHostNode:
         sumo_cmd = [sumo_bin,
                     '-c', sumo_cfg,
                     '--seed', '42',
-                    '--step-length', '0.01',
-                    '--step-method.ballistic']
+                    '--step-length', '0.05',
+                    '--step-method.ballistic',
+                    '--collision.mingap-factor', '10',
+                    '--collision.action', 'none']
         traci.start(sumo_cmd, label='sim')
         self.kernel = traci.getConnection('sim')
         self.add_vehicles_debug()
@@ -61,6 +63,7 @@ class SumoHostNode:
         self.acc2.y = 10
         self.cmd_vel2 = Twist()
         self.v_ref2 = Twist()
+        self.car_len = 0
 
         # Make lead vel have the velocity of a real car
         lead_vel_csv = os.path.join(self.node_path, 'car_vel.csv')
@@ -73,12 +76,12 @@ class SumoHostNode:
         # self.pub.publish(self.cmd_vel)
         self.pub_data.append([self.t, self.vel.linear.x, self.vel2.linear.x])
         # for t in range(4320):
-        for t in range(200):
+        for t in range(800):
             self.rate.sleep()
             self.sumo_data.append(self.get_data_debug())
 
-            # curr_lead_vel = self.get_lead_vel(t)
-            curr_lead_vel = 15
+            curr_lead_vel = self.get_lead_vel(t)
+            # curr_lead_vel = 15
 
             self.kernel.vehicle.setSpeed('lead', curr_lead_vel)
             self.kernel.vehicle.setSpeed('ego', self.cmd_vel.linear.x)
@@ -87,9 +90,6 @@ class SumoHostNode:
             self.kernel.simulationStep()
 
             self.t = time.time() - self.t0
-            # if t >= 1 / 0.05:
-            #     self.cmd_vel.linear.x = get_next_vel(self.kernel, 'fs')
-            # self.pub.publish(self.cmd_vel)
 
             # Get info about current stuff
             self.get_sim_state()
@@ -158,35 +158,61 @@ class SumoHostNode:
         self.kernel.vehicle.setSpeedMode('lead', 0)
         self.kernel.vehicle.add('ego2', 'Eastbound_3', departPos='0')
         self.kernel.vehicle.setSpeedMode('ego2', 0)
+        self.car_len = self.kernel.vehicle.getLength('lead')
 
 
     def get_sim_state(self):
         lead_edge = self.kernel.vehicle.getRoadID('lead')
         lead_edgepos = self.kernel.vehicle.getLanePosition('lead')
-        try:
-            dx = self.kernel.vehicle.getDrivingDistance('ego', lead_edge, lead_edgepos)
-        except traci.exceptions.TraCIException:
-            print('TRACI EXCEPTION BUT JUST GUESS AT DISTANCE')
-            dx = 500
-        dx = dx - self.kernel.vehicle.getLength('lead')
-        dx = dx - self.kernel.vehicle.getMinGap('ego')
+        dx = self.kernel.vehicle.getDrivingDistance('ego', lead_edge, lead_edgepos)
+        # dx = dx - self.kernel.vehicle.getLength('lead')
+        # dx = dx - self.kernel.vehicle.getMinGap('ego')
         vego = self.kernel.vehicle.getSpeed('ego')
         vlead = self.kernel.vehicle.getSpeed('lead')
         self.vel.linear.x = vego
-        self.space_gap.data = dx
+        # self.space_gap.data = dx
         self.rel_vel.linear.x = vlead - vego
+#
+#         ego_edge = self.kernel.vehicle.getRoadID('ego')
+#         ego_edgepos = self.kernel.vehicle.getLanePosition('ego')
+#         dx = self.kernel.vehicle.getDrivingDistance('ego2', ego_edge, ego_edgepos)
+#         dx = dx - self.kernel.vehicle.getLength('ego')
+#         dx = dx - self.kernel.vehicle.getMinGap('ego2')
+#         vego2 = self.kernel.vehicle.getSpeed('ego2')
+#         vlead2 = self.kernel.vehicle.getSpeed('ego')
+#         self.vel2.linear.x = vego2
+#         self.space_gap2.data = dx
+#         self.rel_vel2.linear.x = vlead2 - vego2
+        egopos = self.kernel.vehicle.getPosition('ego')
+        leadpos = self.kernel.vehicle.getPosition('lead')
+        dist = np.sqrt((egopos[0]-leadpos[0])**2 + (egopos[1]-leadpos[1])**2)
+        if dx <= 0:
+            print('EGO AHEAD OF LEAD')
+            # If ego is ahead, distance should be negative
+            dist = -1 * dist
+        # Subtract car length from distance
 
+        self.space_gap.data = dist
+
+        # Vehicle 2
         ego_edge = self.kernel.vehicle.getRoadID('ego')
         ego_edgepos = self.kernel.vehicle.getLanePosition('ego')
-        dx = self.kernel.vehicle.getDrivingDistance('ego2', ego_edge, ego_edgepos)
-        dx = dx - self.kernel.vehicle.getLength('ego')
-        dx = dx - self.kernel.vehicle.getMinGap('ego2')
+        dx2 = self.kernel.vehicle.getDrivingDistance('ego2', ego_edge, ego_edgepos)
         vego2 = self.kernel.vehicle.getSpeed('ego2')
-        vlead2 = self.kernel.vehicle.getSpeed('ego')
         self.vel2.linear.x = vego2
-        self.space_gap2.data = dx
-        self.rel_vel2.linear.x = vlead2 - vego2
+        self.rel_vel2.linear.x = vego - vego2
         # self.accel?
+
+        egopos2 = self.kernel.vehicle.getPosition('ego2')
+        dist2 = np.sqrt((egopos2[0]-egopos[0])**2 + (egopos2[1]-egopos[1])**2)
+        print(dist2)
+        if dx2 <= 0:
+            print('EGO AHEAD OF LEAD')
+            # If ego is ahead, distance should be negative
+            dist2 = -1 * dist2
+        # Subtract car length from distance
+
+        self.space_gap2.data = dist2
 
     def set_speed_debug(self):
         next_vel = self.cmd_vel.linear
@@ -196,19 +222,24 @@ class SumoHostNode:
 
     def get_data_debug(self):
         t = self.kernel.simulation.getTime() - self.kernel.simulation.getDeltaT()
-        ego_pos = 50 + self.kernel.vehicle.getDistance('ego')
+        # ego_pos = self.kernel.vehicle.getDistance('ego')
         ego_vel = self.kernel.vehicle.getSpeed('ego')
         # TODO make ego_acc correct
-        ego_acc = 0
-        # Lead starts 100m ahead
-        lead_pos = 100 + self.kernel.vehicle.getDistance('lead')
+        # ego_acc = 0
+        # Lead starts 50m ahead
+        # lead_pos = 50 + self.kernel.vehicle.getDistance('lead')
+        # lead_edge = self.kernel.vehicle.getRoadID('lead')
+        # lead_edgepos = self.kernel.vehicle.getLanePosition('lead')
+        # lead_pos = self.kernel.vehicle.getDrivingDistance('ego', lead_edge, lead_edgepos)
         lead_vel = self.kernel.vehicle.getSpeed('lead')
         lead_acc = 0
-
-        ego2_pos = self.kernel.vehicle.getDistance('ego2')
+        # return [t, ego_pos, ego_vel, ego_acc, lead_pos, lead_vel, lead_acc]
+        egopos = self.kernel.vehicle.getPosition('ego')
+        leadpos = self.kernel.vehicle.getPosition('lead')
+        ego2pos = self.kernel.vehicle.getPosition('ego2')
         ego2_vel = self.kernel.vehicle.getSpeed('ego2')
-        ego2_accel = 0
-        return [t, ego_pos, ego_vel, ego_acc, lead_pos, lead_vel, lead_acc, ego2_pos, ego2_vel, ego2_accel]
+        return [t, egopos[0], egopos[1], ego_vel, leadpos[0], leadpos[1], lead_vel,
+            ego2pos[0], ego2pos[1], ego2_vel, self.space_gap.data, self.rel_vel.linear.x]
 
 
 if __name__ == '__main__':

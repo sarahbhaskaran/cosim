@@ -93,6 +93,9 @@
 
 		<node pkg="transfer_pkg" type="saveparam.py" name="saveparam" output="screen" args="$(arg description)_enable_$(arg enable_fs) $(arg hwil)">
 		</node>
+
+		<node pkg="accel" type="accel" name="accel">
+		</node>
 </group>
 
 <group ns="av2">
@@ -162,6 +165,8 @@
 	<node pkg="can_to_ros" type ="rosbag_record.sh" name="bashscript2" output="screen" args="$(arg description)_enable_$(arg enable_fs) $(arg hwil)" />
 
 	<node pkg="transfer_pkg" type="saveparam.py" name="saveparam" output="screen" args="$(arg description)_enable_$(arg enable_fs) $(arg hwil)">
+	</node>
+	<node pkg="accel" type="accel" name="accel">
 	</node>
 </group>
 
