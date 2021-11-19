@@ -15,12 +15,13 @@ class SumoHostNode:
         sumo_bin = os.environ['SUMO_HOME']
         self.node_path = os.path.dirname(os.path.realpath(__file__))
         sumo_cfg = os.path.join(self.node_path, 'I24/I24.sumo.cfg')
+        self.min_gap = 0
         sumo_cmd = [sumo_bin,
                     '-c', sumo_cfg,
                     '--seed', '42',
-                    '--step-length', '0.1',
+                    '--step-length', '0.05',
                     '--step-method.ballistic',
-                    '--collision.mingap-factor', '10',
+                    '--collision.mingap-factor', str(self.min_gap),
                     '--collision.action', 'none']
         traci.start(sumo_cmd, label='sim')
         self.kernel = traci.getConnection('sim')
@@ -59,12 +60,12 @@ class SumoHostNode:
         # self.pub.publish(self.cmd_vel)
         self.pub_data.append([self.t, self.vel.linear.x])
         # for t in range(4320):
-        for t in range(800):
+        for t in range(1000):
             self.rate.sleep()
             self.sumo_data.append(self.get_data_debug())
 
-            ##curr_lead_vel = self.get_lead_vel(t)
-            curr_lead_vel = 15
+            curr_lead_vel = self.get_lead_vel(t)
+            # curr_lead_vel = 15
 
             self.kernel.vehicle.setSpeed('lead', curr_lead_vel)
             self.kernel.vehicle.setSpeed('ego', self.cmd_vel.linear.x)
@@ -154,8 +155,9 @@ class SumoHostNode:
             print('EGO AHEAD OF LEAD')
             # If ego is ahead, distance should be negative
             dist = -1 * dist
-        # Subtract car length from distance
-
+        # Subtract car length and sumo min-gap from distance
+        dist -= self.car_len
+        dist -= self.min_gap
         self.space_gap.data = dist
         # self.accel?
 
