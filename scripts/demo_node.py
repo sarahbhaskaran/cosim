@@ -22,7 +22,7 @@ class SumoHostNode:
                     '--step-length', '0.05',
                     '--step-method.ballistic',
                     '--collision.mingap-factor', str(self.min_gap),
-                    '--collision.action', 'none']
+                    '--collision.action', 'remove']
         traci.start(sumo_cmd, label='sim')
         self.kernel = traci.getConnection('sim')
         self.add_vehicles_debug()
@@ -33,6 +33,8 @@ class SumoHostNode:
         self.ego_vel_pub = rospy.Publisher('/vel', Twist, queue_size=0)
         self.space_gap_pub = rospy.Publisher('/lead_dist', Float64, queue_size=0)
         self.rel_vel_pub = rospy.Publisher('/rel_vel', Twist, queue_size=0)
+        # leader_vel as well just in case
+        # self.leader_vel_pub = rospy.Publisher('/leader_vel', Twist, queue_size=0)
         self.acc_pub = rospy.Publisher('/msg_467', Point, queue_size=0)
         self.cmd_vel_sub = rospy.Subscriber('/v_act', Twist, callback=self.callback2)
         self.v_ref_sub = rospy.Subscriber('/v_ref', Twist, callback=self.callback3)
@@ -41,9 +43,10 @@ class SumoHostNode:
         self.v_ref_data = []
         self.vel = Twist()
         self.rel_vel = Twist()
+        # self.leader_vel = Twist()
         self.space_gap = Float64()
         self.acc = Point()
-        self.acc.y = 10
+        self.acc.y = 100000
         self.cmd_vel = Twist()
         self.v_ref = Twist()
 
@@ -80,6 +83,7 @@ class SumoHostNode:
             self.ego_vel_pub.publish(self.vel)
             self.space_gap_pub.publish(self.space_gap)
             self.rel_vel_pub.publish(self.rel_vel)
+            # self.leader_vel_pub.publish(self.leader_vel)
             self.acc_pub.publish(self.acc)
 
 
@@ -132,9 +136,11 @@ class SumoHostNode:
     def add_vehicles_debug(self):
         self.kernel.vehicle.add('ego', 'Eastbound_3', departPos='0')
         self.kernel.vehicle.setSpeedMode('ego', 0)
+        self.kernel.vehicle.setLaneChangeMode('ego', 0)
         self.kernel.vehicle.add('lead', 'Eastbound_3', departPos='50')
         self.kernel.vehicle.setSpeedMode('lead', 0)
         self.car_len = self.kernel.vehicle.getLength('lead')
+        self.kernel.vehicle.setLaneChangeMode('lead', 0)
 
 
     def get_sim_state(self):
@@ -147,7 +153,9 @@ class SumoHostNode:
         vlead = self.kernel.vehicle.getSpeed('lead')
         self.vel.linear.x = vego
         # self.space_gap.data = dx
-        self.rel_vel.linear.x = vlead - vego
+        # Change back and forth based on if rel_vel or leader_vel
+        self.rel_vel.linear.x = vlead-vego
+        # self.leader_vel.linear.x = vlead
         egopos = self.kernel.vehicle.getPosition('ego')
         leadpos = self.kernel.vehicle.getPosition('lead')
         dist = np.sqrt((egopos[0]-leadpos[0])**2 + (egopos[1]-leadpos[1])**2)
