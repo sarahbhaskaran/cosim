@@ -12,16 +12,21 @@ import pandas as pd
 
 class SumoHostNode:
     def __init__(self):
-        sumo_bin = os.environ['SUMO_HOME']
+        gui = False
+        if gui:
+            sumo_bin = os.path.dirname(os.path.realpath(os.environ['SUMO_HOME'])) + '/sumo-gui'
+        else:
+            sumo_bin = os.environ['SUMO_HOME']
         self.node_path = os.path.dirname(os.path.realpath(__file__))
         sumo_cfg = os.path.join(self.node_path, 'I24/I24.sumo.cfg')
+        self.min_gap = 0
         sumo_cmd = [sumo_bin,
                     '-c', sumo_cfg,
                     '--seed', '42',
                     '--step-length', '0.05',
                     '--step-method.ballistic',
-                    '--collision.mingap-factor', '10',
-                    '--collision.action', 'none']
+                    '--collision.mingap-factor', str(self.min_gap),
+                    '--collision.action', 'remove']
         traci.start(sumo_cmd, label='sim')
         self.kernel = traci.getConnection('sim')
         self.add_vehicles_debug()
@@ -36,14 +41,16 @@ class SumoHostNode:
         self.acc_pub = rospy.Publisher('/av1/msg_467', Point, queue_size=0)
         self.cmd_vel_sub = rospy.Subscriber('/av1/v_act', Twist, callback=self.callback2)
         self.v_ref_sub = rospy.Subscriber('/av1/v_ref', Twist, callback=self.callback3)
+
         self.pub_data = []
         self.sub_data = []
         self.v_ref_data = []
         self.vel = Twist()
         self.rel_vel = Twist()
+        # self.leader_vel = Twist()
         self.space_gap = Float64()
         self.acc = Point()
-        self.acc.y = 10
+        self.acc.y = 100000
         self.cmd_vel = Twist()
         self.v_ref = Twist()
 
@@ -51,8 +58,8 @@ class SumoHostNode:
         self.space_gap_pub2 = rospy.Publisher('/av2/lead_dist', Float64, queue_size=0)
         self.rel_vel_pub2 = rospy.Publisher('/av2/rel_vel', Twist, queue_size=0)
         self.acc_pub2 = rospy.Publisher('/av2/msg_467', Point, queue_size=0)
-        self.cmd_vel_sub2 = rospy.Subscriber('/av2/v_act', Twist, callback=self.callback2)
-        self.v_ref_sub2 = rospy.Subscriber('/av2/v_ref', Twist, callback=self.callback3)
+        self.cmd_vel_sub2 = rospy.Subscriber('/av2/v_act', Twist, callback=self.callback2_2)
+        self.v_ref_sub2 = rospy.Subscriber('/av2/v_ref', Twist, callback=self.callback3_2)
         self.pub_data2 = []
         self.sub_data2 = []
         self.v_ref_data2 = []
@@ -76,7 +83,7 @@ class SumoHostNode:
         # self.pub.publish(self.cmd_vel)
         self.pub_data.append([self.t, self.vel.linear.x, self.vel2.linear.x])
         # for t in range(4320):
-        for t in range(800):
+        for t in range(1000):
             self.rate.sleep()
             self.sumo_data.append(self.get_data_debug())
 
@@ -97,6 +104,7 @@ class SumoHostNode:
             self.ego_vel_pub.publish(self.vel)
             self.space_gap_pub.publish(self.space_gap)
             self.rel_vel_pub.publish(self.rel_vel)
+            # self.leader_vel_pub.publish(self.leader_vel)
             self.acc_pub.publish(self.acc)
 
             self.ego_vel_pub2.publish(self.vel2)
@@ -121,6 +129,15 @@ class SumoHostNode:
     def callback2(self, msg):
         self.cmd_vel = msg
         self.sub_data.append([self.t, msg.linear.x])
+
+    def callback3_2(self, msg):
+        self.v_ref2 = msg
+        # v_ref data: time, RL controller output, predicted acceleration
+        self.v_ref_data2.append([self.t, msg.linear.x, msg.linear.z])
+
+    def callback2_2(self, msg):
+        self.cmd_vel2 = msg
+        self.sub_data2.append([self.t, msg.linear.x])
 
     def callback(self, msg):
         print('callback being called')
@@ -155,10 +172,13 @@ class SumoHostNode:
         self.kernel.vehicle.add('ego', 'Eastbound_3', departPos='50')
         self.kernel.vehicle.setSpeedMode('ego', 0)
         self.kernel.vehicle.add('lead', 'Eastbound_3', departPos='100')
+        self.kernel.vehicle.setLaneChangeMode('ego', 0)
         self.kernel.vehicle.setSpeedMode('lead', 0)
         self.kernel.vehicle.add('ego2', 'Eastbound_3', departPos='0')
         self.kernel.vehicle.setSpeedMode('ego2', 0)
         self.car_len = self.kernel.vehicle.getLength('lead')
+        self.kernel.vehicle.setLaneChangeMode('lead', 0)
+        self.kernel.vehicle.setLaneChangeMode('ego2', 0)
 
 
     def get_sim_state(self):
@@ -190,8 +210,9 @@ class SumoHostNode:
             print('EGO AHEAD OF LEAD')
             # If ego is ahead, distance should be negative
             dist = -1 * dist
-        # Subtract car length from distance
-
+        # Subtract car length and sumo min-gap from distance
+        dist -= self.car_len
+        dist -= self.min_gap
         self.space_gap.data = dist
 
         # Vehicle 2
@@ -205,7 +226,6 @@ class SumoHostNode:
 
         egopos2 = self.kernel.vehicle.getPosition('ego2')
         dist2 = np.sqrt((egopos2[0]-egopos[0])**2 + (egopos2[1]-egopos[1])**2)
-        print(dist2)
         if dx2 <= 0:
             print('EGO AHEAD OF LEAD')
             # If ego is ahead, distance should be negative
@@ -239,7 +259,7 @@ class SumoHostNode:
         ego2pos = self.kernel.vehicle.getPosition('ego2')
         ego2_vel = self.kernel.vehicle.getSpeed('ego2')
         return [t, egopos[0], egopos[1], ego_vel, leadpos[0], leadpos[1], lead_vel,
-            ego2pos[0], ego2pos[1], ego2_vel, self.space_gap.data, self.rel_vel.linear.x]
+            ego2pos[0], ego2pos[1], ego2_vel, self.space_gap.data, self.rel_vel.linear.x, self.space_gap2.data, self.rel_vel2.linear.x]
 
 
 if __name__ == '__main__':

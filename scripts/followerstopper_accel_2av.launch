@@ -23,7 +23,7 @@
 	<arg name="T" default="0.6"/>
 	<arg name='hoffman' default='false'/>
 	<arg name='readonly' default='true'/>
-	<arg name='controllers' default='19Jul21_RL_accel_output/19Jul21_RL_accel_output.onnx'/>
+	<arg name='controllers' default='09_04_rll_ttc7p0scale1p8_maxacc0p25/super_resolution.onnx'/>
 
 	<group ns="av1">
 
