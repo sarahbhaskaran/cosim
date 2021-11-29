@@ -12,7 +12,11 @@ import pandas as pd
 
 class SumoHostNode:
     def __init__(self):
-        sumo_bin = os.environ['SUMO_HOME']
+        gui = False
+        if gui:
+            sumo_bin = os.path.dirname(os.path.realpath(os.environ['SUMO_HOME'])) + '/sumo-gui'
+        else:
+            sumo_bin = os.environ['SUMO_HOME']
         self.node_path = os.path.dirname(os.path.realpath(__file__))
         sumo_cfg = os.path.join(self.node_path, 'I24/I24.sumo.cfg')
         self.min_gap = 0
