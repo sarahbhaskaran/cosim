@@ -9,6 +9,7 @@ import traci
 import time
 import pandas as pd
 from args import parse_args
+from utils import fs_accel, idm_accel
 
 
 class SumoHostNode:
@@ -25,11 +26,13 @@ class SumoHostNode:
         self.platoon_set = args.platoon
         self.platoon_names = [veh + str(i) for i, veh in enumerate(self.platoon_set)]
         self.platoon_names[0] = 'lead'
-        self.avs = [i for i, veh in enumerate(self.platoon_names) if 'av' in veh]
+        print('Running with platoon', self.platoon_names)
+        self.avs = [veh for veh in self.platoon_names if 'av' in veh]
+        self.dx = .05
         sumo_cmd = [sumo_bin,
                     '-c', sumo_cfg,
                     '--seed', '42',
-                    '--step-length', '0.05',
+                    '--step-length', str(self.dx),
                     '--step-method.ballistic',
                     '--collision.mingap-factor', str(self.min_gap),
                     '--collision.action', 'none']
@@ -44,24 +47,24 @@ class SumoHostNode:
         # self.pub = rospy.Publisher('/v_act', Twist, queue_size=0)
         # self.sub = rospy.Subscriber('/vel', Twist, self.callback)
 
-        self.ego_vel_pubs = {i: rospy.Publisher('av'+str(i)+'/vel', Twist, queue_size=0) for i in self.avs}
-        self.space_gap_pubs = {i: rospy.Publisher('av'+str(i)+'/lead_dist', Float64, queue_size=0) for i in self.avs}
-        self.rel_vel_pubs = {i: rospy.Publisher('av'+str(i)+'/rel_vel', Twist, queue_size=0) for i in self.avs}
-        self.acc_pubs = {i: rospy.Publisher('av'+str(i)+'/msg_467', Point, queue_size=0) for i in self.avs}
-        self.v_act_subs = {i: rospy.Subscriber('av'+str(i)+'/v_act', Twist, callback=self.v_act_callback_gen(i)) for i in self.avs}
-        self.v_ref_subs = {i: rospy.Subscriber('av'+str(i)+'/v_ref', Twist, callback=self.v_ref_callback_gen(i)) for i in self.avs}
+        self.ego_vel_pubs = {veh: rospy.Publisher(veh+'/vel', Twist, queue_size=0) for veh in self.avs}
+        self.space_gap_pubs = {veh: rospy.Publisher(veh+'/lead_dist', Float64, queue_size=0) for veh in self.avs}
+        self.rel_vel_pubs = {veh: rospy.Publisher(veh+'/rel_vel', Twist, queue_size=0) for veh in self.avs}
+        self.acc_pubs = {av: rospy.Publisher(av+'/msg_467', Point, queue_size=0) for av in self.avs}
+        self.v_act_subs = {veh: rospy.Subscriber(veh+'/v_act', Twist, callback=self.v_act_callback_gen(veh)) for veh in self.avs}
+        self.v_ref_subs = {veh: rospy.Subscriber(veh+'/v_ref', Twist, callback=self.v_ref_callback_gen(veh)) for veh in self.avs}
 
-        self.pub_datas = [[]]*len(self.platoon_names)
-        self.sub_datas = [[]]*len(self.platoon_names)
-        self.v_ref_datas = [[]]*len(self.platoon_names)
-        self.vels = {i: Twist() for i in self.avs}
-        self.rel_vels = {i: Twist() for i in self.avs}
-        self.space_gaps = {i: Float64() for i in self.avs}
-        self.accs = {i: Point() for i in self.avs}
+        self.pub_datas = {veh: [] for veh in self.avs}
+        self.sub_datas = {veh: [] for veh in self.avs}
+        self.v_ref_datas = {veh: [] for veh in self.avs}
+        self.vels = {veh: Twist() for veh in self.platoon_names}
+        self.rel_vels = {veh: Twist() for veh in self.platoon_names}
+        self.space_gaps = {veh: Float64() for veh in self.platoon_names}
+        self.accs = {veh: Point() for veh in self.avs}
         for acc in self.accs.values():
             acc.y = 100
-        self.v_acts = {i: Twist() for i in self.avs}
-        self.v_refs = {i: Twist() for i in self.avs}
+        self.v_acts = {veh: Twist() for veh in self.platoon_names}
+        self.v_refs = {veh: Twist() for veh in self.platoon_names}
 
         # Make lead vel have the velocity of a real car
         lead_vel_csv = os.path.join(self.node_path, 'car_vel.csv')
@@ -71,8 +74,8 @@ class SumoHostNode:
         self.t0 = time.time()
         self.rate = rospy.Rate(20)
         self.t = time.time() - self.t0
-        for i in self.avs:
-            self.pub_datas[i].append([self.t, self.vels[i].linear.x])
+        for veh in self.avs:
+            self.pub_datas[veh].append([self.t, self.vels[veh].linear.x])
         # for t in range(4320):
         for t in range(1000):
             self.rate.sleep()
@@ -82,11 +85,10 @@ class SumoHostNode:
             # curr_lead_vel = 15
 
             self.kernel.vehicle.setSpeed('lead', curr_lead_vel)
-            for i in range(len(self.platoon_names)):
-                if 'av' in self.platoon_names[i]:
-                    self.kernel.vehicle.setSpeed(self.platoon_names[i], self.v_acts[i].linear.x)
-                else:
-                    pass
+            for veh in self.platoon_names[1:]:
+                self.kernel.vehicle.setSpeed(veh, self.v_acts[veh].linear.x)
+                if 'idm' in veh:
+                    self.get_next_vel(veh, 'idm')
 
             self.kernel.simulationStep()
 
@@ -95,14 +97,24 @@ class SumoHostNode:
             # Get info about current stuff
             self.get_sim_state()
             # Publish info that RL controller takes as input
-            for i in self.avs:
-                self.ego_vel_pubs[i].publish(self.vels[i])
-                self.space_gap_pubs[i].publish(self.space_gaps[i])
-                self.rel_vel_pubs[i].publish(self.rel_vels[i])
-                self.acc_pubs[i].publish(self.accs[i])
+            for veh in self.avs:
+                self.ego_vel_pubs[veh].publish(self.vels[veh])
+                self.space_gap_pubs[veh].publish(self.space_gaps[veh])
+                self.rel_vel_pubs[veh].publish(self.rel_vels[veh])
+                self.acc_pubs[veh].publish(self.accs[veh])
 
-                self.pub_datas[i].append([self.t, self.vels[i].linear.x])
+                self.pub_datas[veh].append([self.t, self.vels[veh].linear.x])
 
+    def get_next_vel(self, veh, mode):
+        curr_vel = self.vels[veh].linear.x
+        ahead_veh = self.platoon_names[self.platoon_names.index(veh)-1]
+        ahead_vel = self.vels[ahead_veh].linear.x
+        if mode == 'fs':
+            accel = fs_accel(self.dx, curr_vel, ahead_vel)
+        elif mode == 'idm':
+            accel = idm_accel(self.dx, curr_vel, ahead_vel)
+        self.vels[veh].linear.x = curr_vel + self.dx*accel
+        self.v_acts[veh].linear.x = self.vels[veh].linear.x
 
     def get_lead_vel(self, t):
         vel = next(self.lead_vels)
@@ -115,23 +127,23 @@ class SumoHostNode:
         # v_ref data: time, RL controller output, predicted acceleration
         self.v_ref_data.append([self.t, msg.linear.x, msg.linear.z])
 
-    def v_ref_callback_gen(self, i):
+    def v_ref_callback_gen(self, veh):
         # Based on callback3
         def callback(msg):
-            self.v_refs[i] = msg
+            self.v_refs[veh] = msg
             # v_ref data: time, RL controller output, predicted acceleration
-            self.v_ref_datas[i].append([self.t, msg.linear.x, msg.linear.z])
+            self.v_ref_datas[veh].append([self.t, msg.linear.x, msg.linear.z])
         return callback
 
     def callback2(self, msg):
         self.v_act = msg
         self.sub_data.append([self.t, msg.linear.x])
 
-    def v_act_callback_gen(self, i):
+    def v_act_callback_gen(self, veh):
         # Based on callback_2
         def callback(msg):
             self.v_act = msg
-            self.sub_data.append([self.t, msg.linear.x])
+            self.sub_datas[veh].append([self.t, msg.linear.x])
         return callback
 
     def callback(self, msg):
@@ -153,10 +165,14 @@ class SumoHostNode:
         save_path = os.path.join(self.node_path, 'data/sumo_log.npy')
         np.save(save_path, self.sumo_data)
         save_path = os.path.join(self.node_path, 'data/pub_msgs.npy')
+        # Change it from dictionary to array
+        np.hstack([self.pub_datas[veh] for veh in self.avs])
         np.save(save_path, self.pub_datas)
         save_path = os.path.join(self.node_path, 'data/sub_msgs.npy')
+        np.hstack([self.sub_datas[veh] for veh in self.avs])
         np.save(save_path, self.sub_datas)
         save_path = os.path.join(self.node_path, 'data/v_ref_msgs.npy')
+        np.hstack([self.v_ref_datas[veh] for veh in self.avs])
         np.save(save_path, self.v_ref_datas)
         print('')
         rospy.loginfo('Closing SUMO host node...')
@@ -179,24 +195,24 @@ class SumoHostNode:
         ahead_edgepos = self.kernel.vehicle.getLanePosition('lead')
         ahead_pos = self.kernel.vehicle.getPosition('lead')
         ahead_vel = self.kernel.vehicle.getSpeed('lead')
-        for i in range(1, len(self.platoon_names)):
-            dx = self.kernel.vehicle.getDrivingDistance(self.platoon_names[i], ahead_edge, ahead_edgepos)
-            behind_vel = self.kernel.vehicle.getSpeed(self.platoon_names[i])
-            behind_edge = self.kernel.vehicle.getRoadID(self.platoon_names[i])
-            behind_edgepos = self.kernel.vehicle.getLanePosition(self.platoon_names[i])
-            behind_pos = self.kernel.vehicle.getPosition(self.platoon_names[i])
-            if i in self.avs:
-                self.vels[i].linear.x = behind_vel
-                # self.space_gap.data = dx
-                self.rel_vels[i].linear.x = ahead_vel - behind_vel
-                dist = np.sqrt((ahead_pos[0]-behind_pos[0])**2 + (ahead_pos[1]-behind_pos[1])**2)
-                # Subtract car length and sumo min-gap from distance
-                dist -= self.car_len
-                dist -= self.min_gap
-                if dx < 0:
-                    print('car ' + self.platoon_names[i] + ' ahead of its leader')
-                    dist *= -1
-                self.space_gaps[i].data = dist
+        for veh in self.platoon_names[1:]:
+            dx = self.kernel.vehicle.getDrivingDistance(veh, ahead_edge, ahead_edgepos)
+            behind_vel = self.kernel.vehicle.getSpeed(veh)
+            behind_edge = self.kernel.vehicle.getRoadID(veh)
+            behind_edgepos = self.kernel.vehicle.getLanePosition(veh)
+            behind_pos = self.kernel.vehicle.getPosition(veh)
+
+            self.vels[veh].linear.x = behind_vel
+            # self.space_gap.data = dx
+            self.rel_vels[veh].linear.x = ahead_vel - behind_vel
+            dist = np.sqrt((ahead_pos[0]-behind_pos[0])**2 + (ahead_pos[1]-behind_pos[1])**2)
+            # Subtract car length and sumo min-gap from distance
+            dist -= self.car_len
+            dist -= self.min_gap
+            if dx < 0:
+                print('car ' + veh + ' ahead of its leader')
+                dist *= -1
+            self.space_gaps[veh].data = dist
 
             ahead_edge = behind_edge
             ahead_edgepos = behind_edgepos
@@ -213,14 +229,10 @@ class SumoHostNode:
     def get_data_debug(self):
         t = self.kernel.simulation.getTime() - self.kernel.simulation.getDeltaT()
         data = []
-        for i in range(len(self.platoon_names)):
-            pos = self.kernel.vehicle.getPosition(self.platoon_names[i])
-            vel = self.kernel.vehicle.getSpeed(self.platoon_names[i])
-            if 'av' in self.platoon_names[i]:
-                data.append([t, pos[0], pos[1], vel, self.space_gaps[i].data, self.rel_vels[i].linear.x])
-            else:
-                # No space gaps for non rl vehicles for now
-                data.append([t, pos[0], pos[1], vel, 0, 0])
+        for veh in self.platoon_names:
+            pos = self.kernel.vehicle.getPosition(veh)
+            vel = self.kernel.vehicle.getSpeed(veh)
+            data.append([t, pos[0], pos[1], vel, self.space_gaps[veh].data, self.rel_vels[veh].linear.x])
 
         return data
 
