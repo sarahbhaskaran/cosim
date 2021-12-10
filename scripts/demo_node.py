@@ -24,8 +24,7 @@ class SumoHostNode:
         sumo_cfg = os.path.join(self.node_path, 'I24/I24.sumo.cfg')
         self.min_gap = 0
         self.platoon_set = args.platoon
-        self.platoon_names = [veh + str(i) for i, veh in enumerate(self.platoon_set)]
-        self.platoon_names[0] = 'lead'
+        self.platoon_names = ['lead'] + [veh + str(i+1) for i, veh in enumerate(self.platoon_set)]
         print('Running with platoon', self.platoon_names)
         self.avs = [veh for veh in self.platoon_names if 'av' in veh]
         self.dx = .05
@@ -77,18 +76,21 @@ class SumoHostNode:
         for veh in self.avs:
             self.pub_datas[veh].append([self.t, self.vels[veh].linear.x])
         # for t in range(4320):
-        for t in range(1000):
+        for t in range(500):
             self.rate.sleep()
             self.sumo_data.append(self.get_data_debug())
 
             curr_lead_vel = self.get_lead_vel(t)
             # curr_lead_vel = 15
+            self.vels['lead'].linear.x = curr_lead_vel
+            self.v_acts['lead'].linear.x = curr_lead_vel
 
-            self.kernel.vehicle.setSpeed('lead', curr_lead_vel)
-            for veh in self.platoon_names[1:]:
+            for veh in self.platoon_names:
                 self.kernel.vehicle.setSpeed(veh, self.v_acts[veh].linear.x)
                 if 'idm' in veh:
                     self.get_next_vel(veh, 'idm')
+                else:
+                    print('v act', self.v_acts[veh].linear.x)
 
             self.kernel.simulationStep()
 
@@ -102,17 +104,20 @@ class SumoHostNode:
                 self.space_gap_pubs[veh].publish(self.space_gaps[veh])
                 self.rel_vel_pubs[veh].publish(self.rel_vels[veh])
                 self.acc_pubs[veh].publish(self.accs[veh])
-
+                print(self.vels[veh].linear.x, 'vel')
+                print(self.rel_vels[veh].linear.x, 'rel vel')
+                print(self.space_gaps[veh].data, 'gap')
                 self.pub_datas[veh].append([self.t, self.vels[veh].linear.x])
 
     def get_next_vel(self, veh, mode):
         curr_vel = self.vels[veh].linear.x
         ahead_veh = self.platoon_names[self.platoon_names.index(veh)-1]
         ahead_vel = self.vels[ahead_veh].linear.x
+        gap = self.space_gaps[veh].data
         if mode == 'fs':
-            accel = fs_accel(self.dx, curr_vel, ahead_vel)
+            accel = fs_accel(gap, curr_vel, ahead_vel)
         elif mode == 'idm':
-            accel = idm_accel(self.dx, curr_vel, ahead_vel)
+            accel = idm_accel(gap, curr_vel, ahead_vel)
         self.vels[veh].linear.x = curr_vel + self.dx*accel
         self.v_acts[veh].linear.x = self.vels[veh].linear.x
 
@@ -140,8 +145,10 @@ class SumoHostNode:
         self.sub_data.append([self.t, msg.linear.x])
 
     def v_act_callback_gen(self, veh):
+        print('callback for', veh)
         # Based on callback_2
         def callback(msg):
+            print('in callback for', veh)
             self.v_act = msg
             self.sub_datas[veh].append([self.t, msg.linear.x])
         return callback
@@ -164,16 +171,20 @@ class SumoHostNode:
             os.makedirs(os.path.join(self.node_path, 'data/'))
         save_path = os.path.join(self.node_path, 'data/sumo_log.npy')
         np.save(save_path, self.sumo_data)
-        save_path = os.path.join(self.node_path, 'data/pub_msgs.npy')
         # Change it from dictionary to array
-        np.hstack([self.pub_datas[veh] for veh in self.avs])
-        np.save(save_path, self.pub_datas)
-        save_path = os.path.join(self.node_path, 'data/sub_msgs.npy')
-        np.hstack([self.sub_datas[veh] for veh in self.avs])
-        np.save(save_path, self.sub_datas)
-        save_path = os.path.join(self.node_path, 'data/v_ref_msgs.npy')
-        np.hstack([self.v_ref_datas[veh] for veh in self.avs])
-        np.save(save_path, self.v_ref_datas)
+        if self.avs:
+            save_path = os.path.join(self.node_path, 'data/pub_msgs.npy')
+            len_pubs = min([len(x) for x in self.pub_datas.values()])
+            pubs = np.stack([self.pub_datas[veh][:len_pubs] for veh in self.avs])
+            np.save(save_path, pubs)
+            save_path = os.path.join(self.node_path, 'data/sub_msgs.npy')
+            len_subs = min([len(x) for x in self.sub_datas.values()])
+            subs = np.stack([self.sub_datas[veh][:len_subs] for veh in self.avs])
+            np.save(save_path, subs)
+            len_refs = min([len(x) for x in self.v_ref_datas.values()])
+            save_path = os.path.join(self.node_path, 'data/v_ref_msgs.npy')
+            refs = np.stack([self.v_ref_datas[veh][:len_refs] for veh in self.avs])
+            np.save(save_path, refs)
         print('')
         rospy.loginfo('Closing SUMO host node...')
         self.kernel.close()
