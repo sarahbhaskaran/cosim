@@ -46,12 +46,12 @@ class SumoHostNode:
         # self.pub = rospy.Publisher('/v_act', Twist, queue_size=0)
         # self.sub = rospy.Subscriber('/vel', Twist, self.callback)
 
-        self.ego_vel_pubs = {veh: rospy.Publisher(veh+'/vel', Twist, queue_size=0) for veh in self.avs}
-        self.space_gap_pubs = {veh: rospy.Publisher(veh+'/lead_dist', Float64, queue_size=0) for veh in self.avs}
-        self.rel_vel_pubs = {veh: rospy.Publisher(veh+'/rel_vel', Twist, queue_size=0) for veh in self.avs}
-        self.acc_pubs = {av: rospy.Publisher(av+'/msg_467', Point, queue_size=0) for av in self.avs}
-        self.v_act_subs = {veh: rospy.Subscriber(veh+'/v_act', Twist, callback=self.v_act_callback_gen(veh)) for veh in self.avs}
-        self.v_ref_subs = {veh: rospy.Subscriber(veh+'/v_ref', Twist, callback=self.v_ref_callback_gen(veh)) for veh in self.avs}
+        self.ego_vel_pubs = {veh: rospy.Publisher('/'+veh+'/vel', Twist, queue_size=0) for veh in self.avs}
+        self.space_gap_pubs = {veh: rospy.Publisher('/'+veh+'/lead_dist', Float64, queue_size=0) for veh in self.avs}
+        self.rel_vel_pubs = {veh: rospy.Publisher('/'+veh+'/rel_vel', Twist, queue_size=0) for veh in self.avs}
+        self.acc_pubs = {av: rospy.Publisher('/'+av+'/msg_467', Point, queue_size=0) for av in self.avs}
+        self.v_act_subs = {veh: rospy.Subscriber('/'+veh+'/v_act', Twist, callback=self.v_act_callback_gen(veh)) for veh in self.avs}
+        self.v_ref_subs = {veh: rospy.Subscriber('/'+veh+'/v_ref', Twist, callback=self.v_ref_callback_gen(veh)) for veh in self.avs}
 
         self.pub_datas = {veh: [] for veh in self.avs}
         self.sub_datas = {veh: [] for veh in self.avs}
@@ -76,7 +76,7 @@ class SumoHostNode:
         for veh in self.avs:
             self.pub_datas[veh].append([self.t, self.vels[veh].linear.x])
         # for t in range(4320):
-        for t in range(500):
+        for t in range(1000):
             self.rate.sleep()
             self.sumo_data.append(self.get_data_debug())
 
@@ -89,8 +89,6 @@ class SumoHostNode:
                 self.kernel.vehicle.setSpeed(veh, self.v_acts[veh].linear.x)
                 if 'idm' in veh:
                     self.get_next_vel(veh, 'idm')
-                else:
-                    print('v act', self.v_acts[veh].linear.x)
 
             self.kernel.simulationStep()
 
@@ -104,9 +102,6 @@ class SumoHostNode:
                 self.space_gap_pubs[veh].publish(self.space_gaps[veh])
                 self.rel_vel_pubs[veh].publish(self.rel_vels[veh])
                 self.acc_pubs[veh].publish(self.accs[veh])
-                print(self.vels[veh].linear.x, 'vel')
-                print(self.rel_vels[veh].linear.x, 'rel vel')
-                print(self.space_gaps[veh].data, 'gap')
                 self.pub_datas[veh].append([self.t, self.vels[veh].linear.x])
 
     def get_next_vel(self, veh, mode):
@@ -145,11 +140,9 @@ class SumoHostNode:
         self.sub_data.append([self.t, msg.linear.x])
 
     def v_act_callback_gen(self, veh):
-        print('callback for', veh)
         # Based on callback_2
         def callback(msg):
-            print('in callback for', veh)
-            self.v_act = msg
+            self.v_acts[veh] = msg
             self.sub_datas[veh].append([self.t, msg.linear.x])
         return callback
 
