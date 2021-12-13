@@ -34,14 +34,14 @@ class SumoHostNode:
 
         # self.pub = rospy.Publisher('/cmd_vel', Twist, queue_size=0)
         # self.sub = rospy.Subscriber('/vel', Twist, self.callback)
-        self.ego_vel_pub = rospy.Publisher('/vel', Twist, queue_size=0)
-        self.space_gap_pub = rospy.Publisher('/lead_dist', Float64, queue_size=0)
-        self.rel_vel_pub = rospy.Publisher('/rel_vel', Twist, queue_size=0)
+        self.av1_vel_pub = rospy.Publisher('/av1/vel', Twist, queue_size=0)
+        self.space_gap_pub = rospy.Publisher('/av1/lead_dist', Float64, queue_size=0)
+        self.rel_vel_pub = rospy.Publisher('/av1/rel_vel', Twist, queue_size=0)
         # leader_vel as well just in case
         # self.leader_vel_pub = rospy.Publisher('/leader_vel', Twist, queue_size=0)
-        self.acc_pub = rospy.Publisher('/msg_467', Point, queue_size=0)
-        self.cmd_vel_sub = rospy.Subscriber('/v_act', Twist, callback=self.callback2)
-        self.v_ref_sub = rospy.Subscriber('/v_ref', Twist, callback=self.callback3)
+        self.acc_pub = rospy.Publisher('/av1/msg_467', Point, queue_size=0)
+        self.cmd_vel_sub = rospy.Subscriber('/av1/v_act', Twist, callback=self.callback2)
+        self.v_ref_sub = rospy.Subscriber('/av1/v_ref', Twist, callback=self.callback3)
         self.pub_data = []
         self.sub_data = []
         self.v_ref_data = []
@@ -75,7 +75,7 @@ class SumoHostNode:
             # curr_lead_vel = 15
 
             self.kernel.vehicle.setSpeed('lead', curr_lead_vel)
-            self.kernel.vehicle.setSpeed('ego', self.cmd_vel.linear.x)
+            self.kernel.vehicle.setSpeed('av1', self.cmd_vel.linear.x)
 
             self.kernel.simulationStep()
 
@@ -84,7 +84,7 @@ class SumoHostNode:
             # Get info about current stuff
             self.get_sim_state()
             # Publish info that RL controller takes as input
-            self.ego_vel_pub.publish(self.vel)
+            self.av1_vel_pub.publish(self.vel)
             self.space_gap_pub.publish(self.space_gap)
             self.rel_vel_pub.publish(self.rel_vel)
             # self.leader_vel_pub.publish(self.leader_vel)
@@ -138,9 +138,9 @@ class SumoHostNode:
 
 
     def add_vehicles_debug(self):
-        self.kernel.vehicle.add('ego', 'Eastbound_3', departPos='0')
-        self.kernel.vehicle.setSpeedMode('ego', 0)
-        self.kernel.vehicle.setLaneChangeMode('ego', 0)
+        self.kernel.vehicle.add('av1', 'Eastbound_3', departPos='0')
+        self.kernel.vehicle.setSpeedMode('av1', 0)
+        self.kernel.vehicle.setLaneChangeMode('av1', 0)
         self.kernel.vehicle.add('lead', 'Eastbound_3', departPos='50')
         self.kernel.vehicle.setSpeedMode('lead', 0)
         self.car_len = self.kernel.vehicle.getLength('lead')
@@ -150,22 +150,22 @@ class SumoHostNode:
     def get_sim_state(self):
         lead_edge = self.kernel.vehicle.getRoadID('lead')
         lead_edgepos = self.kernel.vehicle.getLanePosition('lead')
-        dx = self.kernel.vehicle.getDrivingDistance('ego', lead_edge, lead_edgepos)
+        dx = self.kernel.vehicle.getDrivingDistance('av1', lead_edge, lead_edgepos)
         # dx = dx - self.kernel.vehicle.getLength('lead')
-        # dx = dx - self.kernel.vehicle.getMinGap('ego')
-        vego = self.kernel.vehicle.getSpeed('ego')
+        # dx = dx - self.kernel.vehicle.getMinGap('av1')
+        vav1 = self.kernel.vehicle.getSpeed('av1')
         vlead = self.kernel.vehicle.getSpeed('lead')
-        self.vel.linear.x = vego
+        self.vel.linear.x = vav1
         # self.space_gap.data = dx
         # Change back and forth based on if rel_vel or leader_vel
-        self.rel_vel.linear.x = vlead-vego
+        self.rel_vel.linear.x = vlead-vav1
         # self.leader_vel.linear.x = vlead
-        egopos = self.kernel.vehicle.getPosition('ego')
+        av1pos = self.kernel.vehicle.getPosition('av1')
         leadpos = self.kernel.vehicle.getPosition('lead')
-        dist = np.sqrt((egopos[0]-leadpos[0])**2 + (egopos[1]-leadpos[1])**2)
+        dist = np.sqrt((av1pos[0]-leadpos[0])**2 + (av1pos[1]-leadpos[1])**2)
         if dx <= 0:
             print('EGO AHEAD OF LEAD')
-            # If ego is ahead, distance should be negative
+            # If av1 is ahead, distance should be negative
             dist = -1 * dist
         # Subtract car length and sumo min-gap from distance
         dist -= self.car_len
@@ -175,27 +175,27 @@ class SumoHostNode:
 
     def set_speed_debug(self):
         next_vel = self.cmd_vel.linear
-        self.kernel.vehicle.setSpeed('ego', next_vel)
+        self.kernel.vehicle.setSpeed('av1', next_vel)
         self.kernel.vehicle.setSpeed('lead', 1)
 
 
     def get_data_debug(self):
         t = self.kernel.simulation.getTime() - self.kernel.simulation.getDeltaT()
-        # ego_pos = self.kernel.vehicle.getDistance('ego')
-        ego_vel = self.kernel.vehicle.getSpeed('ego')
-        # TODO make ego_acc correct
-        # ego_acc = 0
+        # av1_pos = self.kernel.vehicle.getDistance('av1')
+        av1_vel = self.kernel.vehicle.getSpeed('av1')
+        # TODO make av1_acc correct
+        # av1_acc = 0
         # Lead starts 50m ahead
         # lead_pos = 50 + self.kernel.vehicle.getDistance('lead')
         # lead_edge = self.kernel.vehicle.getRoadID('lead')
         # lead_edgepos = self.kernel.vehicle.getLanePosition('lead')
-        # lead_pos = self.kernel.vehicle.getDrivingDistance('ego', lead_edge, lead_edgepos)
+        # lead_pos = self.kernel.vehicle.getDrivingDistance('av1', lead_edge, lead_edgepos)
         lead_vel = self.kernel.vehicle.getSpeed('lead')
         lead_acc = 0
-        # return [t, ego_pos, ego_vel, ego_acc, lead_pos, lead_vel, lead_acc]
-        egopos = self.kernel.vehicle.getPosition('ego')
+        # return [t, av1_pos, av1_vel, av1_acc, lead_pos, lead_vel, lead_acc]
+        av1pos = self.kernel.vehicle.getPosition('av1')
         leadpos = self.kernel.vehicle.getPosition('lead')
-        return [t, egopos[0], egopos[1], ego_vel, leadpos[0], leadpos[1], lead_vel, self.space_gap.data, self.rel_vel.linear.x]
+        return [t, av1pos[0], av1pos[1], av1_vel, leadpos[0], leadpos[1], lead_vel, self.space_gap.data, self.rel_vel.linear.x]
 
 
 if __name__ == '__main__':
