@@ -24,12 +24,12 @@ cd ~/catkin_ws
 catkin_make
 source devel/setup.sh
 ```
-3. Start controller ros nodes
+3. Start ROS
 ```
 roscore
-roslaunch transfer_pkg rl0719_readonly.launch readonly:=false
 ```
-This is all for main branch for now; when using acceleration model, start running that rosnode as well.
 
 ## Run simulation
-1. rosrun cosim demo_node.py
+1. rosrun cosim demo_node.py --platoon "av human\*5"
+  *Notation for declaring the platoon is same as in https://github.com/nathanlct/trajectory-training-icra; vehicles can also be listed one by one, and the current options are "av" and "human"*
+3. Graph .npy files generated in cosim/scripts/data
