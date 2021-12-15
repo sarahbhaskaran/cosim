@@ -46,16 +46,18 @@ class SumoHostNode:
         # self.pub = rospy.Publisher('/v_act', Twist, queue_size=0)
         # self.sub = rospy.Subscriber('/vel', Twist, self.callback)
 
-        self.ego_vel_pubs = {veh: rospy.Publisher('/'+veh+'/vel', Twist, queue_size=0) for veh in self.avs}
-        self.space_gap_pubs = {veh: rospy.Publisher('/'+veh+'/lead_dist', Float64, queue_size=0) for veh in self.avs}
-        self.rel_vel_pubs = {veh: rospy.Publisher('/'+veh+'/rel_vel', Twist, queue_size=0) for veh in self.avs}
-        self.acc_pubs = {av: rospy.Publisher('/'+av+'/msg_467', Point, queue_size=0) for av in self.avs}
-        self.v_act_subs = {veh: rospy.Subscriber('/'+veh+'/v_act', Twist, callback=self.v_act_callback_gen(veh)) for veh in self.avs}
-        self.v_ref_subs = {veh: rospy.Subscriber('/'+veh+'/v_ref', Twist, callback=self.v_ref_callback_gen(veh)) for veh in self.avs}
+        self.ego_vel_pubs = {veh: rospy.Publisher(veh+'/vel', Twist, queue_size=0) for veh in self.avs}
+        self.space_gap_pubs = {veh: rospy.Publisher(veh+'/lead_dist', Float64, queue_size=0) for veh in self.avs}
+        self.rel_vel_pubs = {veh: rospy.Publisher(veh+'/rel_vel', Twist, queue_size=0) for veh in self.avs}
+        self.acc_pubs = {av: rospy.Publisher(av+'/msg_467', Point, queue_size=0) for av in self.avs}
+        self.v_act_subs = {veh: rospy.Subscriber(veh+'/v_act', Twist, callback=self.v_act_callback_gen(veh)) for veh in self.avs}
+        self.v_ref_subs = {veh: rospy.Subscriber(veh+'/v_ref', Twist, callback=self.v_ref_callback_gen(veh)) for veh in self.avs}
+        self.cmd_vel_subs = {veh: rospy.Subscriber(veh+'/cmd_vel', Twist, callback=self.cmd_vel_callback_gen(veh)) for veh in self.avs}
 
         self.pub_datas = {veh: [] for veh in self.avs}
         self.sub_datas = {veh: [] for veh in self.avs}
         self.v_ref_datas = {veh: [] for veh in self.avs}
+        self.cmd_vel_datas = {veh: [] for veh in self.avs}
         self.vels = {veh: Twist() for veh in self.platoon_names}
         self.rel_vels = {veh: Twist() for veh in self.platoon_names}
         self.space_gaps = {veh: Float64() for veh in self.platoon_names}
@@ -64,6 +66,7 @@ class SumoHostNode:
             acc.y = 100
         self.v_acts = {veh: Twist() for veh in self.platoon_names}
         self.v_refs = {veh: Twist() for veh in self.platoon_names}
+        self.cmd_vels = {veh: Twist() for veh in self.avs}
 
         # Make lead vel have the velocity of a real car
         lead_vel_csv = os.path.join(self.node_path, 'car_vel.csv')
@@ -135,6 +138,14 @@ class SumoHostNode:
             self.v_ref_datas[veh].append([self.t, msg.linear.x, msg.linear.z])
         return callback
 
+    def cmd_vel_callback_gen(self, veh):
+        # Based on callback3
+        def callback(msg):
+            self.cmd_vels[veh] = msg
+            # v_ref data: time, RL controller output, predicted acceleration
+            self.cmd_vel_datas[veh].append([self.t, msg.linear.x])
+        return callback
+
     def callback2(self, msg):
         self.v_act = msg
         self.sub_data.append([self.t, msg.linear.x])
@@ -166,6 +177,8 @@ class SumoHostNode:
         np.save(save_path, self.sumo_data)
         # Change it from dictionary to array
         if self.avs:
+            # Different vehicles may have different numbers of publish or subscribe
+            # messages so I'm just cutting them off at the minimum number
             save_path = os.path.join(self.node_path, 'data/pub_msgs.npy')
             len_pubs = min([len(x) for x in self.pub_datas.values()])
             pubs = np.stack([self.pub_datas[veh][:len_pubs] for veh in self.avs])
@@ -178,6 +191,10 @@ class SumoHostNode:
             save_path = os.path.join(self.node_path, 'data/v_ref_msgs.npy')
             refs = np.stack([self.v_ref_datas[veh][:len_refs] for veh in self.avs])
             np.save(save_path, refs)
+            save_path = os.path.join(self.node_path, 'data/cmd_vel_msgs.npy')
+            len_cmd_vels = min([len(x) for x in self.cmd_vel_datas.values()])
+            cmd_vels = np.stack([self.cmd_vel_datas[veh][:len_cmd_vels] for veh in self.avs])
+            np.save(save_path, cmd_vels)
         print('')
         rospy.loginfo('Closing SUMO host node...')
         self.kernel.close()
