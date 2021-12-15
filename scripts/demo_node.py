@@ -10,6 +10,8 @@ import time
 import pandas as pd
 from args import parse_args
 from utils import fs_accel, idm_accel
+from gen_launch_file import write_file
+import subprocess
 
 
 class SumoHostNode:
@@ -27,6 +29,16 @@ class SumoHostNode:
         self.platoon_names = ['lead'] + [veh + str(i+1) for i, veh in enumerate(self.platoon_set)]
         print('Running with platoon', self.platoon_names)
         self.avs = [veh for veh in self.platoon_names if 'av' in veh]
+
+        self.new_process = True
+        if self.new_process:
+            # Now that we have the avs, we can write and start the launch file.
+            self.launch_file = f'launch{str(int(time.time()))}.launch'
+            print(f'Launch file saved at {self.launch_file}')
+            write_file(self.avs, filename=self.launch_file)
+            self.launch_process = subprocess.Popen(['roslaunch', 'cosim', self.launch_file])
+
+        time.sleep(3)
         self.dx = .05
         sumo_cmd = [sumo_bin,
                     '-c', sumo_cfg,
@@ -171,6 +183,9 @@ class SumoHostNode:
                 pass
 
     def shutdown(self):
+        if self.new_process:
+            # Terminate launchfile process
+            self.launch_process.terminate()
         if not os.path.exists(os.path.join(self.node_path, 'data/')):
             os.makedirs(os.path.join(self.node_path, 'data/'))
         save_path = os.path.join(self.node_path, 'data/sumo_log.npy')
