@@ -12,6 +12,7 @@ from args import parse_args
 from utils import fs_accel, idm_accel
 from gen_launch_file import write_file
 import subprocess
+from graph_output import graph_output
 
 
 class SumoHostNode:
@@ -210,6 +211,7 @@ class SumoHostNode:
             len_cmd_vels = min([len(x) for x in self.cmd_vel_datas.values()])
             cmd_vels = np.stack([self.cmd_vel_datas[veh][:len_cmd_vels] for veh in self.avs])
             np.save(save_path, cmd_vels)
+        graph_output(self.platoon_names)
         print('')
         rospy.loginfo('Closing SUMO host node...')
         self.kernel.close()
