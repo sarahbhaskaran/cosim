@@ -28,8 +28,16 @@ source devel/setup.sh
 ```
 roscore
 ```
+4. Install python packages
+```
+conda env create --file=environment.yml
+```
+(Or if this breaks, create and activate cosim environment and install the packages found in environment.yml or as necessary based on error messages)
+```
+conda activate cosim
+```
 
 ## Run simulation
-1. rosrun cosim demo_node.py --platoon "av human\*5"
+1. rosrun cosim demo\_node.py --platoon "av human\*5"
   *Notation for declaring the platoon is same as in https://github.com/nathanlct/trajectory-training-icra; vehicles can also be listed one by one, and the current options are "av" and "human"*
-3. Graph .npy files generated in cosim/scripts/data
+2. View .png graphs generated in cosim/scripts: {}\_vs\_time.png {xpos, ypos, vel, headway, rel\_vel, v\_acts, v\_acts\_cmd\_vels, v\_refs}
