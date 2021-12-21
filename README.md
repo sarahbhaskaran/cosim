@@ -1,8 +1,11 @@
 # cosim
 
+Simulate a platoon of vehicles in SUMO. The lead vehicle's trajectory comes from car_vel.csv and is currently the actual trajectory of one of the testbed vehicles from Vandertest. The following vehicles can be any ordering of "human" and "av" vehicles; humans are simulated by IDM and AVs are controlled by RL controller, follower-stopper, and acceleration dynamics. The RL controller and related components run in ROS. 
+
+
 ## Setup
 
-1. Put repositories in catkin workspace, including this one
+1. Put repositories in catkin workspace, including this one. Most of these are private.
 ```
 cd ~/catkin_ws/src
 git clone git@github.com:sarahbhaskaran/cosim.git
@@ -17,6 +20,7 @@ git clone git@github.com:jmscslgroup/integrator
 git clone git@github.com:jmscslgroup/margin
 git clone git@github.com:jmscslgroup/can_to_ros
 git clone git@github.com:jmscslgroup/transfer_pkg
+git clone git@github.com:sarahbhaskaran/accel.git
 ```
 2. Build packages
 ```
