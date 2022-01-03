@@ -93,7 +93,7 @@
 	<node pkg="transfer_pkg" type="saveparam.py" name="saveparam" output="screen" args="$(arg description)_enable_$(arg enable_fs) $(arg hwil)">
 	</node>
 
-	<node pkg="accel" type="accel_node" name="accel">
+	<node pkg="accel" type="accel" name="accel">
 	</node>
 
 </launch>

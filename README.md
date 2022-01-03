@@ -1,8 +1,11 @@
 # cosim
 
+Simulate a platoon of vehicles in SUMO. The lead vehicle's trajectory comes from car_vel.csv and is currently the actual trajectory of one of the testbed vehicles from Vandertest. The following vehicles can be any ordering of "human" and "av" vehicles; humans are simulated by IDM and AVs are controlled by RL controller, follower-stopper, and acceleration dynamics. The RL controller and related components run in ROS.
+
+
 ## Setup
 
-1. Put repositories in catkin workspace, including this one
+1. Put repositories in catkin workspace, including this one. Most of these are private.
 ```
 cd ~/catkin_ws/src
 git clone git@github.com:sarahbhaskaran/cosim.git
@@ -17,6 +20,7 @@ git clone git@github.com:jmscslgroup/integrator
 git clone git@github.com:jmscslgroup/margin
 git clone git@github.com:jmscslgroup/can_to_ros
 git clone git@github.com:jmscslgroup/transfer_pkg
+git clone git@github.com:sarahbhaskaran/accel.git
 ```
 2. Build packages
 ```
@@ -24,12 +28,20 @@ cd ~/catkin_ws
 catkin_make
 source devel/setup.sh
 ```
-3. Start controller ros nodes
+3. Start ROS
 ```
 roscore
-roslaunch transfer_pkg rl0719_readonly.launch readonly:=false
 ```
-This is all for main branch for now; when using acceleration model, start running that rosnode as well.
+4. Install python packages
+```
+conda env create --file=environment.yml
+```
+(Or if this breaks, create and activate cosim environment and install the packages found in environment.yml or as necessary based on error messages)
+```
+conda activate cosim
+```
 
 ## Run simulation
-1. rosrun cosim demo_node.py
+1. rosrun cosim demo\_node.py --platoon "av human\*5"
+  *Notation for declaring the platoon is same as in https://github.com/nathanlct/trajectory-training-icra; vehicles can also be listed one by one, and the current options are "av" and "human"*
+2. View .png graphs generated in cosim/scripts: {}\_vs\_time.png {xpos, ypos, vel, headway, rel\_vel, v\_acts, v\_acts\_cmd\_vels, v\_refs}

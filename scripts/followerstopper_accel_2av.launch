@@ -2,32 +2,31 @@
 
 <launch>
 
-	<arg name="description" default="following_real_vehicle_rl0719"/>
-
-	<arg name="margin" default="30.0"/>
-	<arg name="use_margin" default="false"/>
-	<arg name="SPEED_SCALE" default="1.0"/>
-	<arg name="HEADWAY_SCALE" default="1.0"/>
-	<arg name="enable_fs" default="true"/>
-	<arg name="hwil" default="true"/>
-	<arg name="th1" default="0.4"/>
-	<arg name="th2" default="1.2"/>
-	<arg name="th3" default="1.8"/>
-	<arg name="w1" default="4.5"/>
-	<arg name="w3" default="6.0"/>
-	<arg name="w2" default="5.25"/>
-	<arg name="ego_veltopic" default="/vel"/>
-        <arg name="relative_veltopic" default="/rel_vel"/>
-        <arg name="headway_topic" default="/lead_dist"/>
-        <arg name="use_accel_predict" default="true"/>
-	<arg name="T" default="0.6"/>
-	<arg name='hoffman' default='false'/>
-	<arg name='readonly' default='true'/>
-	<arg name='controllers' default='09_04_rll_ttc7p0scale1p8_maxacc0p25/super_resolution.onnx'/>
-
 	<group ns="av1">
+		<arg name="description" default="following_real_vehicle_rl0719"/>
 
-		<param name="model" type="string" value="$(find onnx2ros)/../controllers/$(arg controllers)"/>
+		<arg name="margin" default="30.0"/>
+		<arg name="use_margin" default="false"/>
+		<arg name="SPEED_SCALE" default="1.0"/>
+		<arg name="HEADWAY_SCALE" default="1.0"/>
+		<arg name="enable_fs" default="true"/>
+		<arg name="hwil" default="true"/>
+		<arg name="th1" default="0.4"/>
+		<arg name="th2" default="1.2"/>
+		<arg name="th3" default="1.8"/>
+		<arg name="w1" default="4.5"/>
+		<arg name="w3" default="6.0"/>
+		<arg name="w2" default="5.25"/>
+		<arg name="ego_veltopic" default="/vel"/>
+					<arg name="relative_veltopic" default="/rel_vel"/>
+					<arg name="headway_topic" default="/lead_dist"/>
+					<arg name="use_accel_predict" default="true"/>
+		<arg name="T" default="0.6"/>
+		<arg name='hoffman' default='false'/>
+		<arg name='readonly' default='true'/>
+		<arg name='controllers' default='09_04_rll_ttc7p0scale1p8_maxacc0p25/super_resolution.onnx'/>
+
+		<param name="model" type="string" value="/root/catkin_ws/src/cosim/scripts/super_resolution_kinda_safe.onnx"/>
 	        <param name="mode" type="string" value="prompt"/>
 		<param name="/margin" value="$(arg margin)"/>
 		<param name="description" value="$(arg description)_enable_$(arg enable_fs)"/>
@@ -100,6 +99,29 @@
 
 <group ns="av2">
 
+	<arg name="description" default="following_real_vehicle_rl0719"/>
+
+	<arg name="margin" default="30.0"/>
+	<arg name="use_margin" default="false"/>
+	<arg name="SPEED_SCALE" default="1.0"/>
+	<arg name="HEADWAY_SCALE" default="1.0"/>
+	<arg name="enable_fs" default="true"/>
+	<arg name="hwil" default="true"/>
+	<arg name="th1" default="0.4"/>
+	<arg name="th2" default="1.2"/>
+	<arg name="th3" default="1.8"/>
+	<arg name="w1" default="4.5"/>
+	<arg name="w3" default="6.0"/>
+	<arg name="w2" default="5.25"/>
+	<arg name="ego_veltopic" default="/vel"/>
+				<arg name="relative_veltopic" default="/rel_vel"/>
+				<arg name="headway_topic" default="/lead_dist"/>
+				<arg name="use_accel_predict" default="true"/>
+	<arg name="T" default="0.6"/>
+	<arg name='hoffman' default='false'/>
+	<arg name='readonly' default='true'/>
+	<arg name='controllers' default='09_04_rll_ttc7p0scale1p8_maxacc0p25/super_resolution.onnx'/>
+
 	<param name="model" type="string" value="$(find onnx2ros)/../controllers/$(arg controllers)"/>
 				<param name="mode" type="string" value="prompt"/>
 	<param name="/margin" value="$(arg margin)"/>
@@ -171,4 +193,3 @@
 </group>
 
 </launch>
-

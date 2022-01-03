@@ -38,7 +38,6 @@ def fs_accel(dx, vego, vlead):
         (v + (U - v) * (dx - dx2) / (dx3 - dx2)) * (dx2 < dx <= dx3) + \
         U * (dx3 < dx)
     accel = np.clip((cmd_vel - vego) / 0.5, -1.5, 1.0)
-    print('accel', accel)
     return accel
 
 

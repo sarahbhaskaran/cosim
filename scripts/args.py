@@ -18,6 +18,7 @@ def parse_args():
             'Has not been tested.')
     args = parser.parse_args()
     args.platoon = platoon_parse(args.platoon)
+    return args
 
 # From trajectory-training
 def platoon_parse(platoon):
@@ -43,3 +44,7 @@ def platoon_parse(platoon):
             else:
                 raise ValueError(f'Unknown vehicle type: {vtype}. Allowed types are "human" and "av".')
     return vehicles
+<<<<<<< HEAD
+=======
+
+>>>>>>> platoon-sim
