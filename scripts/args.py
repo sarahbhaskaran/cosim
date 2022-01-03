@@ -44,7 +44,5 @@ def platoon_parse(platoon):
             else:
                 raise ValueError(f'Unknown vehicle type: {vtype}. Allowed types are "human" and "av".')
     return vehicles
-<<<<<<< HEAD
-=======
 
->>>>>>> platoon-sim
+
