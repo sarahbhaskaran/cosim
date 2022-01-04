@@ -33,10 +33,12 @@ class SumoHostNode:
         self.new_process = True
         if self.new_process:
             # Now that we have the avs, we can write and start the launch file.
-            self.launch_file = f'launch{str(int(time.time()))}.launch'
-            print(f'Launch file saved at {self.launch_file}')
+            self.launch_file = os.path.join(self.node_path, 'launch_files', f'launch{str(int(time.time()))}.launch')
+            if not os.path.exists(os.path.join(self.node_path, 'launch_files')):
+                os.makedirs(os.path.join(self.node_path, 'launch_files'))
             write_file(self.avs, filename=self.launch_file)
-            self.launch_process = subprocess.Popen(['roslaunch', 'cosim', self.launch_file])
+            print(f'Launch file saved at {self.launch_file}')
+            self.launch_process = subprocess.Popen(['roslaunch', self.launch_file])
 
         time.sleep(3)
         self.dx = .05
@@ -289,3 +291,4 @@ if __name__ == '__main__':
             node.shutdown()
     except rospy.ROSInterruptException:
         pass
+

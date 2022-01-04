@@ -3,10 +3,14 @@ import os
 import numpy as np
 
 def graph_output(vehs=None):
-    ''' Graph data in cosim/scripts/data from the last run of demo_node.py
+    ''' Graph data in cosim/scripts/data from the last run of demo_node.py,
+        saving the figures in cosim/scripts/figures
     '''
 
-    dir = os.path.realpath(os.path.dirname('__file__'))
+    dir = os.path.dirname(os.path.realpath(__file__))
+    figure_path = os.path.join(dir, 'figures')
+    if not os.path.exists(figure_path):
+        os.makedirs(figure_path)
     # sumo_log.npy data was added in get_data_debug() of demo_node.py
     # [t, pos[0], pos[1], vel, self.space_gaps[veh].data, self.rel_vels[veh].linear.x]
     sumo = np.load(dir + '/data/sumo_log.npy')
@@ -24,7 +28,7 @@ def graph_output(vehs=None):
     plt.ylabel('xpos')
     plt.title('x position vs time')
     plt.legend()
-    plt.savefig(dir+'/xpos_vs_time.png')
+    plt.savefig(figure_path+'/xpos_vs_time.png')
 
     plt.figure()
     for i in range(sumo.shape[1]):
@@ -33,7 +37,7 @@ def graph_output(vehs=None):
     plt.ylabel('ypos')
     plt.title('y position vs time')
     plt.legend()
-    plt.savefig(dir+'/ypos_vs_time.png')
+    plt.savefig(figure_path+'/ypos_vs_time.png')
 
     plt.figure()
     for i in range(sumo.shape[1]):
@@ -42,7 +46,7 @@ def graph_output(vehs=None):
     plt.ylabel('vel')
     plt.legend()
     plt.title('Velocity vs time')
-    plt.savefig(dir+'/vel_vs_time.png')
+    plt.savefig(figure_path+'/vel_vs_time.png')
 
     plt.figure()
     for i in range(sumo.shape[1]):
@@ -51,7 +55,7 @@ def graph_output(vehs=None):
     plt.ylabel('headway (m)')
     plt.legend()
     plt.title('Headway vs time')
-    plt.savefig(dir+'/headway_vs_time.png')
+    plt.savefig(figure_path+'/headway_vs_time.png')
 
     plt.figure()
     for i in range(sumo.shape[1]):
@@ -60,7 +64,7 @@ def graph_output(vehs=None):
     plt.ylabel('relative velocity (m/s)')
     plt.legend()
     plt.title('Relative velocity of preceding car vs time')
-    plt.savefig(dir+'/rel_vel_vs_time.png')
+    plt.savefig(figure_path+'/rel_vel_vs_time.png')
 
     ros = np.load(dir+'/data/sub_msgs.npy', allow_pickle=True)
     avs = [veh for veh in vehs if 'av' in veh]
@@ -74,7 +78,7 @@ def graph_output(vehs=None):
     plt.ylabel('v_act.linear.x')
     plt.title('ROS msgs for velocity after accel dynamics')
     plt.legend()
-    plt.savefig('v_acts_vs_time.png')
+    plt.savefig(figure_path+'/v_acts_vs_time.png')
 
     # Same figure? No, another plot with both on same figure
     plt.figure()
@@ -87,7 +91,7 @@ def graph_output(vehs=None):
     plt.ylabel('velocity')
     plt.title('ROS msgs for cmd_vels before accel dynamics, v_acts after')
     plt.legend()
-    plt.savefig('v_acts_cmd_vels_vs_time.png')
+    plt.savefig(figure_path+'/v_acts_cmd_vels_vs_time.png')
 
     plt.figure()
     v_refs = np.load(dir+'/data/v_ref_msgs.npy', allow_pickle=True)
@@ -97,8 +101,8 @@ def graph_output(vehs=None):
     plt.ylabel('v_ref.linear.x')
     plt.title('ROS v_ref msgs (predicted acceleration)')
     plt.legend()
-    plt.savefig('v_refs_vs_time.png')
+    plt.savefig(figure_path+'/v_refs_vs_time.png')
 
 
-graph_output(['lead', 'av1', 'idm2', 'idm3', 'idm4', 'idm5', 'idm6'])
 # plt.show()
+
