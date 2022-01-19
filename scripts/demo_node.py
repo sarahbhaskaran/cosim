@@ -10,7 +10,7 @@ import time
 import pandas as pd
 from args import parse_args
 from utils import fs_accel, idm_accel
-from gen_launch_file import write_file
+from gen_launch_file import write_file, gen_from_launch_file
 import subprocess
 from graph_output import graph_output
 
@@ -36,7 +36,8 @@ class SumoHostNode:
             self.launch_file = os.path.join(self.node_path, 'launch_files', f'launch{str(int(time.time()))}.launch')
             if not os.path.exists(os.path.join(self.node_path, 'launch_files')):
                 os.makedirs(os.path.join(self.node_path, 'launch_files'))
-            write_file(self.avs, filename=self.launch_file)
+            gen_from_launch_file(self.avs, self.node_path+'/followerstopper_with_accel_dynamics.launch',  output_filename=self.launch_file)
+
             print(f'Launch file saved at {self.launch_file}')
             self.launch_process = subprocess.Popen(['roslaunch', self.launch_file])
 

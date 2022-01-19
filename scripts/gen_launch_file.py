@@ -1,4 +1,6 @@
 
+
+
 def write_file(names, filename='launch_file.launch'):
     contents = []
     contents.append('''<?xml version="1.0" encoding="UTF-8"?>
@@ -106,3 +108,28 @@ def write_file(names, filename='launch_file.launch'):
     total_contents = '\n'.join(contents)
     with open(filename, 'w+') as f:
         f.write(total_contents)
+
+def gen_from_launch_file(names, base_launch_file, output_filename='launch_file.launch'):
+    ''' Takes a launch file for a single vehicle and converts it to work for an arbitrary number
+        of vehicles.
+    '''
+    import xml.etree.ElementTree as ET
+    import xml.dom.minidom as minidom
+
+    tree = ET.parse(base_launch_file)
+    root = tree.getroot()
+    inner = root.findall('./*')
+    for c in inner:
+        root.remove(c)
+    for name in names:
+        child = ET.SubElement(root, 'group', {'ns': name})
+        for c in inner:
+            child.append(c)
+
+    xmlstr = ET.tostring(root)
+    m = minidom.parseString(xmlstr)
+    prettier_xml = m.toprettyxml(newl='')
+
+    with open(output_filename, 'w') as f:
+        f.write(prettier_xml)
+
