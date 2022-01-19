@@ -42,6 +42,8 @@ conda activate cosim
 ```
 
 ## Run simulation
+Demo at https://drive.google.com/file/d/1G0-OmXikAf056v4T7YDrOE3YGBhjOS3w/view?usp=sharing
+
 1. rosrun cosim demo\_node.py --platoon "av human\*5"
   *Notation for declaring the platoon is same as in https://github.com/nathanlct/trajectory-training-icra; vehicles can also be listed one by one, and the current options are "av" and "human"*
 2. View .png graphs generated in cosim/scripts: {}\_vs\_time.png {xpos, ypos, vel, headway, rel\_vel, v\_acts, v\_acts\_cmd\_vels, v\_refs}
