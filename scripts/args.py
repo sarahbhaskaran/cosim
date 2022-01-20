@@ -16,6 +16,11 @@ def parse_args():
     parser.add_argument('--gui', default=False, action='store_true',
         help='Run in gui mode so that the platoon\'s progress can be watched during simulation. '
             'Has not been tested.')
+    parser.add_argument('--launch_file', type=str, default='followerstopper_with_accel_dynamics.launch',
+        help='Launch file that would be used to start the ROS nodes to support a single autonomous vehicle.')
+    parser.add_argument('--accel_node_names', type=str, default='',
+        help='Acceleration dynamics ROS node "package type name" separated by spaces, like "accel accel accel",'
+            'if this is not included in the launch file provided.')
     args = parser.parse_args()
     args.platoon = platoon_parse(args.platoon)
     return args
@@ -44,5 +49,4 @@ def platoon_parse(platoon):
             else:
                 raise ValueError(f'Unknown vehicle type: {vtype}. Allowed types are "human" and "av".')
     return vehicles
-
 

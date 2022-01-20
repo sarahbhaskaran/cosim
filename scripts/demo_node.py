@@ -36,7 +36,13 @@ class SumoHostNode:
             self.launch_file = os.path.join(self.node_path, 'launch_files', f'launch{str(int(time.time()))}.launch')
             if not os.path.exists(os.path.join(self.node_path, 'launch_files')):
                 os.makedirs(os.path.join(self.node_path, 'launch_files'))
-            gen_from_launch_file(self.avs, self.node_path+'/followerstopper_with_accel_dynamics.launch',  output_filename=self.launch_file, accel_names=None)
+            orig_launch_file = self.node_path+'/followerstopper_with_accel_dynamics.launch'
+            if args.launch_file != '':
+                orig_launch_file = args.launch_file
+            accel_names = None
+            if args.accel_node_names != '':
+                accel_names = args.accel_node_names.split()
+            gen_from_launch_file(self.avs, orig_launch_file, output_filename=self.launch_file, accel_names=accel_names)
 
             print(f'Launch file saved at {self.launch_file}')
             self.launch_process = subprocess.Popen(['roslaunch', self.launch_file])
