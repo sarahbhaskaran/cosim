@@ -1,5 +1,7 @@
-
-
+#####################################################################################
+# Generate launch file for ROS nodes needed to run an RL or other hardware controller
+# Author: Sarah Bhaskaran
+#####################################################################################
 
 def write_file(names, filename='launch_file.launch'):
     contents = []
@@ -109,9 +111,12 @@ def write_file(names, filename='launch_file.launch'):
     with open(filename, 'w+') as f:
         f.write(total_contents)
 
-def gen_from_launch_file(names, base_launch_file, output_filename='launch_file.launch'):
+def gen_from_launch_file(names, base_launch_file, output_filename='launch_file.launch', accel_names=('accel', 'accel', 'accel')):
     ''' Takes a launch file for a single vehicle and converts it to work for an arbitrary number
         of vehicles.
+
+        accel_names: (pkg, type, name) Name of the acceleration dynamics package and command to run it.
+            Pass None if it is already in the file.
     '''
     import xml.etree.ElementTree as ET
     import xml.dom.minidom as minidom
@@ -121,10 +126,18 @@ def gen_from_launch_file(names, base_launch_file, output_filename='launch_file.l
     inner = root.findall('./*')
     for c in inner:
         root.remove(c)
+
     for name in names:
         child = ET.SubElement(root, 'group', {'ns': name})
         for c in inner:
             child.append(c)
+        # Accel dynamics
+        if accel_names is not None:
+            acc = ET.SubElement(child, 'node', {
+                'pkg': accel_names[0],
+                'type': accel_names[1],
+                'name': accel_names[2]
+            })
 
     xmlstr = ET.tostring(root)
     m = minidom.parseString(xmlstr)
