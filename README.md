@@ -13,6 +13,7 @@ git clone git@github.com:jmscslgroup/hoffmansubsystem
 git clone git@github.com:jmscslgroup/followerstoppermax4rl
 git clone git@github.com:jmscslgroup/followerstoppermax
 git clone git@github.com:jmscslgroup/followerstopperth
+git clone git@github.com:jmscslgroup/followerstopperth4rl
 git clone git@github.com:jmscslgroup/micromodel
 git clone git@github.com:jmscslgroup/trajectory_07_05_2021_real
 git clone git@github.com:jmscslgroup/velocity_controller
