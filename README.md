@@ -21,7 +21,13 @@ git clone git@github.com:jmscslgroup/integrator
 git clone git@github.com:jmscslgroup/margin
 git clone git@github.com:jmscslgroup/can_to_ros
 git clone git@github.com:jmscslgroup/transfer_pkg
+git clone git@github.com:CIRCLES-consortium/algos-stack.git
 git clone git@github.com:sarahbhaskaran/accel.git
+```
+```
+cd algos-stack
+git checkout setpoint_rahul
+cd ..
 ```
 2. Build packages
 ```
